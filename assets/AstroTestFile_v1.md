@@ -1,0 +1,176 @@
+---
+  title: 'AstroTestFile.astro'
+  description: 'component description'
+  pubDate: 'July 29, 2024'
+  author: 'Carlos P'
+  ---
+  
+  
+  
+  # AstroTestFile.astro
+  ## Explanation of FileDropZone Component
+
+This code snippet is a React component called `FileDropZone` that allows users to drag and drop files or select files from their system. The component enforces restrictions on the types of files that can be uploaded and limits the number of files that can be selected.
+
+### Libraries and Dependencies
+- `react`: This code is written in React, a JavaScript library for building user interfaces.
+- `@heroicons/react`: This library provides icons used in the component.
+
+### Variables
+- `allowedExtensions`: An array containing the file extensions that are allowed to be uploaded.
+- `maxFiles`: Maximum number of files that can be uploaded.
+
+### State Variables
+- `selectedFiles`: An array that holds the files selected by the user.
+- `error`: A string used to display error messages.
+
+### Functions
+1. `handleDragOver`: Prevents the default behavior when an item is dragged over the drop zone.
+2. `handleDrop`: Handles the drop event when files are dropped into the drop zone.
+3. `extractFiles`: Extracts files from the dropped items and validates them against allowed extensions.
+4. `traverseFileTree`: Recursively traverses a directory to extract files.
+5. `isValidFile`: Checks if a file has a valid extension.
+6. `handleFileSelect`: Handles the file selection event when files are selected using the file input.
+7. `validateAndSetFiles`: Validates selected files against allowed extensions and maximum file limit.
+
+### Usage
+1. The component renders a drop zone where files can be dropped or selected.
+2. Users can drag and drop files/folders into the drop zone or click to select files.
+3. Selected files are displayed with their icons and names.
+4. Error messages are shown if the selected files exceed the maximum limit or have invalid extensions.
+
+### Example Usage
+```jsx
+<FileDropZone />
+```
+
+This code snippet provides a user-friendly way to upload files with restrictions on file types and the number of files that can be uploaded.
+  
+  ## Component Code
+  ```jsx
+  ///jsx
+  ---
+import { useState } from 'react';
+import { DocumentTextIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+
+const allowedExtensions = [
+  ".js", ".jsx", ".ts", ".tsx", ".py", ".java", ".rb", ".php",
+  ".html", ".css", ".cpp", ".c", ".go", ".rs", ".swift", ".kt",
+  ".m", ".h", ".cs", ".json", ".xml", ".sh", ".yml", ".yaml",
+  ".vue", ".svelte", ".qwik"
+];
+const maxFiles = 4;
+
+const FileDropZone = () => {
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [error, setError] = useState('');
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    const items = e.dataTransfer.items;
+    const filesArray = await extractFiles(items);
+    validateAndSetFiles(filesArray);
+  };
+
+  const extractFiles = async (items) => {
+    const filesArray = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i].webkitGetAsEntry();
+      if (item.isFile) {
+        const file = await new Promise((resolve) => item.file(resolve));
+        if (isValidFile(file)) {
+          filesArray.push(file);
+        } else {
+          setError(`Invalid file type. Only ${allowedExtensions.join(", ")} files are allowed.`);
+        }
+      } else if (item.isDirectory) {
+        await traverseFileTree(item, filesArray);
+      }
+    }
+    return filesArray;
+  };
+
+  const traverseFileTree = (item, filesArray) => {
+    return new Promise((resolve) => {
+      if (item.isFile) {
+        item.file((file) => {
+          if (isValidFile(file)) {
+            filesArray.push(file);
+          }
+          resolve();
+        });
+      } else if (item.isDirectory) {
+        const dirReader = item.createReader();
+        dirReader.readEntries(async (entries) => {
+          for (const entry of entries) {
+            await traverseFileTree(entry, filesArray);
+          }
+          resolve();
+        });
+      }
+    });
+  };
+
+  const isValidFile = (file) => allowedExtensions.some((ext) => file.name.endsWith(ext));
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    validateAndSetFiles(files);
+  };
+
+  const validateAndSetFiles = (files) => {
+    const filteredFiles = files.filter(isValidFile);
+    if (filteredFiles.length + selectedFiles.length > maxFiles) {
+      setError(`You can only upload a maximum of ${maxFiles} files.`);
+    } else {
+      setSelectedFiles((prev) => [...prev, ...filteredFiles].slice(0, maxFiles));
+      setError("");
+    }
+  };
+
+  return (
+    <div
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      class="p-4 border-2 border-dashed border-gray-300 rounded-md text-center cursor-pointer mb-4 h-96 w-96 flex overflow-y-scroll items-center justify-center"
+    >
+      <input
+        type="file"
+        onChange={handleFileSelect}
+        style={{ display: "none" }}
+        accept={allowedExtensions.join(",")}
+        id="fileUpload"
+        multiple
+      />
+      <label for="fileUpload" class="cursor-pointer">
+        {selectedFiles.length > 0 ? (
+          <div class="flex flex-wrap gap-10">
+            {selectedFiles.map((file) => (
+              <div key={file.name}>
+                <DocumentTextIcon class="mx-auto w-8" />
+                <p>{file.name}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div>
+            <ArrowUpTrayIcon class="mx-auto w-8" />
+            <p>Drag & drop files or folders here, or click to select files</p>
+          </div>
+        )}
+      </label>
+    </div>
+  );
+};
+
+export default FileDropZone;
+---
+
+<FileDropZone />
+  ///
+  ```
+  
